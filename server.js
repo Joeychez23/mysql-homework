@@ -6,11 +6,16 @@ const inquirer = require('inquirer');
 const port = process.env.PORT || 3000;
 require("console.table");
 
+//Create database query string
 const createDatabase = require('./sql/createDatabase.sql');
+
+//Create tables query string
 const createFullEmployee = require('./sql/tables/fullEmployee.sql');
 const createEmployee = require('./sql/tables/employee.sql')
 const createDepartment = require('./sql/tables/department.sql');
 const createRole = require('./sql/tables/role.sql');
+
+//Create procedures query string
 const fullEmployeePro = require('./sql/procedures/fullEmployeePro.sql');
 const employeePro = require('./sql/procedures/employeePro.sql');
 const rolePro = require('./sql/procedures/rolePro.sql');
@@ -26,13 +31,14 @@ app.use(bodyParser.json());
 let connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: '[yourPassword]',
+    password: '[YourPasswordHere]',
+            //^^Enter Password Here
     multipleStatements: true,
     insecureAuth: true
 });
 
 
-
+//Query to initalize database
 connection.query(createDatabase, function (error) {
     if (error) {
         console.log(error)
@@ -42,7 +48,7 @@ connection.query(createDatabase, function (error) {
 })
 
 
-
+//Querys to initalize tables
 connection.query(createFullEmployee, function(error) {
     if (error) {
         console.log(error)
@@ -77,6 +83,8 @@ connection.query(createDepartment, function(error) {
 })
 
 
+
+//Querys to initalize procedures
 connection.query(fullEmployeePro, function(error) {
     if (error) {
         console.log(error)
@@ -116,7 +124,7 @@ app.listen(port);
 console.log(`listening on port ${port}`);
 
 
-
+//Menu Question
 const menuQ = [
     {
         type: "list",
@@ -126,9 +134,11 @@ const menuQ = [
     },
 ];
 
-let startUp = true;
 
-start()
+
+
+//Global variables
+let startUp = true;
 let allEmpData;
 let roleData;
 let departData;
@@ -136,12 +146,16 @@ let roleArr;
 let employeeArr;
 let departArr;
 let currId;
-let currDepart;
 
-//
-let getEmpData;
+
+
+start();
+
+
+
 async function start(err) {
     if (err) throw err;
+    //Only throws start screen once
     if (startUp == true) {
         console.log(`
         ╔═══╗─────╔╗──────────────╔═╗╔═╗
@@ -152,19 +166,23 @@ async function start(err) {
         ╚═══╩╩╩╣╔═╩═╩══╩═╗╔╩══╩══╝╚╝╚╝╚╩╝╚╩╝╚╩╝╚╩═╗╠══╩╝
         ───────║║──────╔═╝║─────────────────────╔═╝║
         ───────╚╝──────╚══╝─────────────────────╚══╝`)
+
         startUp = false;
     }
 
     const menuA = await inquirer.prompt(menuQ);
-    //console.log(menuA);
+
 
     if (menuA.choice == "View All Employees") {
+        //Logs the table to the console
         await viewAllEmployees();
         setTimeout(function () {
             start();
         }, 100)
     }
+
     if (menuA.choice == "Add Employee") {
+        //Sets all the store global data variables
         await getEmployees();
         await getRoles();
         await getDepart();
@@ -379,8 +397,8 @@ async function start(err) {
 
     }
 
-
     if(menuA.choice == "Update Employee") {
+        //Sets all the store global data variables
         await getEmployees();
         await getRoles();
         await getDepart();
@@ -390,14 +408,18 @@ async function start(err) {
             employeeArr = new Array;
             departArr = new Array;
             let matchIndex = new Array;
+
+            //Sets Array of full employee names
             for (let i = 0; i < allEmpData.length; i++) {
-                fullName = ''
+                fullName = '';
                 fullName = allEmpData[i].first_name;
                 fullName += ' ';
                 fullName += allEmpData[i].last_name;
                 employeeArr[employeeArr.length] = `${fullName}`;
             }
-            employeeArr[employeeArr.length] = 'N/A'
+            employeeArr[employeeArr.length] = 'N/A';
+
+
             const getEmpQ = {
                 type: "list",
                 message: "Which Employee would you like to update",
@@ -405,8 +427,11 @@ async function start(err) {
                 //Sets the choices the employee array
                 choices: function () { return employeeArr },
             }
+            //Prompt the user with names of the employee to be updated
             const upEmp = await inquirer.prompt(getEmpQ);
             let empId;
+
+            //Sets currId for database to overwrite
             for (let i = 0; i < allEmpData.length; i++) {
                 if (upEmp.employee == 'N/A') {
                     return start();
@@ -417,7 +442,6 @@ async function start(err) {
                 }
             }
             currId = empId;
-            //console.log(empId);
 
 
             //Find repeating role values
@@ -450,6 +474,15 @@ async function start(err) {
             roleArr[roleArr.length] = 'None';
 
 
+            let employeeArr2 = new Array;
+
+            //Creates a second array that dosen't include the currently selected employee
+            for(let i = 0; i < employeeArr.length; i++) {
+                if(upEmp.employee != employeeArr[i]) {
+                    employeeArr2[employeeArr2.length] = employeeArr[i];
+                }
+            }
+
             const updateQ = [
             {
                 type: "list",
@@ -463,9 +496,11 @@ async function start(err) {
                 message: "Who's the employees manager",
                 name: "manager",
                 //Sets the choices the employee array
-                choices: function () { return employeeArr },
+                choices: function () { return employeeArr2 },
             },]
 
+
+            //Prompts the user for updated values
             const updateVal = await inquirer.prompt(updateQ);
 
 
@@ -573,10 +608,10 @@ async function start(err) {
 
             }
 
-            //Both functions add data to there respective SQL tables
             if(managerId == currId) {
                 console.log("manager cannot be the same employee");
             }
+            //Both functions add data to there respective SQL tables
             if(managerId != currId) {
                 addFullEmpData(fullData)
                 addEmpData(data);
@@ -586,10 +621,11 @@ async function start(err) {
         }, 100)
     }
 
-
     if(menuA.choice == "View All Roles") {
+        //Sets all the store global data variables
         await getRoles();
         await getDepart();
+        //Sets the data to be logged to the console
         setTimeout(function () {
             for(let i = 0; i < roleData.length; i++) {
                 for(let j = 0; j < departData.length; j++) {
@@ -598,22 +634,30 @@ async function start(err) {
                     }
                 }
             }
-            //console.log(roleData)
             console.table(roleData);
             return start();
         }, 100)
     }
 
-
     if(menuA.choice == "Add Role") {
+        //Sets all the store global data variables
         await getRoles();
         await getDepart();
         setTimeout(async function () {
+            //Sets currId to 0 so the procedures auto increment
             currId = 0;
             departArr = new Array;
+            //Sets department array
             for(let i = 0; i < departData.length; i++) {
                 departArr[departArr.length] = departData[i].name;
             }
+
+            if(departData.length == 0) {
+                console.log("No Departments, create a department to add roles")
+                return start();
+            }
+
+            //New roles question
             const roleQ = [
                 {
                     type: "input",
@@ -653,16 +697,17 @@ async function start(err) {
 
             const addRole = await inquirer.prompt(roleQ);
 
-            console.log(addRole);
-
             let departId;
 
+
+            //Finds the department Id based on the user selected name
             for(let i = 0; i < departData.length; i++) {
                 if(addRole.depart == departData[i].name) {
                     departId = departData[i].id;
                 }
             }
 
+            //data object to be used as values that're stored in the database
             let data = {
                 id: currId,
                 title: addRole.title,
@@ -672,6 +717,8 @@ async function start(err) {
 
             let check = true
 
+
+            //Checks to see if the role already exists inside the same department of the database
             for(let i =0; i < roleData.length; i++) {
                 if(addRole.title == roleData[i].title && departId == roleData[i].department_id) {
                     check = false;
@@ -692,16 +739,16 @@ async function start(err) {
         }, 100);
     }
 
-
     if(menuA.choice == "View All Departments") {
+        //Logs the table to the console
         await viewDepartment();
         setTimeout(function () {
             start();
         }, 100)
     }
 
-
     if(menuA.choice == 'Add Department') {
+        //Sets all the store global data variables
         await getRoles();
         await getDepart();
         setTimeout(async function () {
@@ -721,12 +768,18 @@ async function start(err) {
                     },
                 }
             ]
+
+            //Prompts the user for a department name
             const addDepart = await inquirer.prompt(departQ);
 
+
+            //Sets data object
             let data = {
                 id: currId,
                 name: addDepart.title
             }
+
+            //Checks to see if the department is a repeat value
             const check = true
             for(let i = 0; i < departData.length; i ++) {
                 if(departData[i].name == addDepart.title) {
@@ -758,16 +811,16 @@ async function start(err) {
 
 
 
-//Write to console
+
 async function viewAllEmployees() {
-    //console.log("Viewing role\n");
-    //WHERE id=1
+    //Grabs all from employeesDB.employeeData
     connection.query('SELECT * FROM employeesDB.employeeData', (error, rows) => {
         if (error) {
             console.log('error');
         }
         if (!error) {
-            console.log('Success');
+            //console.log('Success');
+            //Prints to console
             console.table(rows);
             return rows
 
@@ -778,14 +831,14 @@ async function viewAllEmployees() {
 
 
 function viewDepartment() {
-    console.log("Viewing department\n");
-
+    //Grabs all from employeesDB.department
     connection.query('SELECT * FROM employeesDB.department', (error, rows) => {
         if (error) {
             console.log('error');
         }
         if (!error) {
-            console.log('Success');
+            //console.log('Success');
+            //Prints to console
             console.table(rows);
             return
 
@@ -795,15 +848,15 @@ function viewDepartment() {
 
 
 function getEmployees() {
-    //console.log("Viewing employees\n");
+    //Grabs all from employeesDB.employee
     connection.query('SELECT * FROM employeesDB.employee', (error, rows) => {
         if (error) {
             console.log('error');
         }
         if (!error) {
-            console.log('Success');
+            //console.log('Success');
+            //Sets global object
             allEmpData = rows
-            //console.table(rows);
             return rows
 
         }
@@ -812,12 +865,14 @@ function getEmployees() {
 
 
 function getRoles() {
+    //Grabs all from employeesDB.role
     connection.query('SELECT * FROM employeesDB.role', (error, rows) => {
         if (error) {
             console.log('error');
         }
         if (!error) {
-            console.log('Success');
+            //console.log('Success');
+            //Sets global object
             roleData = rows;
             return rows
 
@@ -827,13 +882,14 @@ function getRoles() {
 
 
 function getDepart() {
-    //console.log("Viewing role\n");
+    //Grabs all from employeesDB.department
     connection.query('SELECT * FROM employeesDB.department', (error, rows) => {
         if (error) {
             console.log('error');
         }
         if (!error) {
-            console.log('Success');
+            //console.log('Success');
+            //Sets global object
             departData = rows;
             return rows
 
@@ -843,8 +899,10 @@ function getDepart() {
 
 
 async function addFullEmpData(data) {
+    //Sets the procedure query call syntax
     var sql = "SET @id = ?;SET @first_name = ?;SET @last_name = ?;SET @title = ?;SET @department = ?;SET @salary = ?;SET @manager = ?; \
     CALL addFullEmployee(@id,@first_name,@last_name,@title,@department,@salary,@manager);";
+    //calls the procedure query
     connection.query(sql, [data.id, data.firstName, data.lastName, data.title, data.department, data.salary, data.manager], (error, rows) => {
         if (error) {
             console.log(error)
@@ -856,8 +914,10 @@ async function addFullEmpData(data) {
 
 
 async function addEmpData(data) {
+    //Sets the procedure query call syntax
     var sql = "SET @id = ?;SET @first_name = ?;SET @last_name = ?;SET @role_id = ?;SET @manager_id = ?; \
     CALL addEmployee(@id,@first_name,@last_name,@role_id,@manager_id);";
+    //calls the procedure query
     connection.query(sql, [data.id, data.firstName, data.lastName, data.role_id, data.manager_id], (error, rows) => {
         if (error) {
             console.log(error)
@@ -869,8 +929,10 @@ async function addEmpData(data) {
 
 
 async function roleAdd(data) {
+    //Sets the procedure query call syntax
     var sql = "SET @id = ?;SET @title = ?;SET @salary = ?;SET @department_id = ?; \
     CALL addRole(@id,@title,@salary,@department_id);";
+    //calls the procedure query
     connection.query(sql, [data.id, data.title, data.salary, data.department_id], (error, rows) => {
         if (error) {
             console.log(error)
@@ -882,8 +944,10 @@ async function roleAdd(data) {
 
 
 async function departAdd(data) {
+    //Sets the procedure query call syntax
     var sql = "SET @id = ?;SET @name = ?; \
     CALL addDepart(@id,@name);";
+    //calls the procedure query
     connection.query(sql, [data.id, data.name], (error, rows) => {
         if (error) {
             console.log(error)
